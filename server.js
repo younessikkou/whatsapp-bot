@@ -4,6 +4,10 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
+// ===== INTÉGRATION E-COMMERCE =====
+const ecommerceWebhooks = require('./ecommerce-webhooks');
+app.use('/ecommerce', ecommerceWebhooks);
+
 process.on('uncaughtException', (err) => {
   console.error('❌ uncaughtException:', err.message, err.stack);
 });
