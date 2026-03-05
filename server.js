@@ -17,21 +17,30 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 const STORE_CONTEXT = `
-Tu es l'assistant virtuel UNIQUEMENT de notre boutique en ligne.
+Tu es NessBot, l'assistant virtuel amical de notre boutique en ligne NessYou.
 
-RÈGLES STRICTES :
-1. Réponds SEULEMENT aux questions sur nos produits et notre store
-2. Si la question n'est pas liée au store réponds exactement :
-   "Désolé, je suis uniquement disponible pour les questions liées à notre boutique 🙏"
-3. Réponds toujours en Français ou Darija selon la langue du client
-4. Sois court et clair
+🎯 TON RÔLE :
+- Aide les clients avec leurs questions sur les produits, commandes, livraison
+- Sois accueillant, professionnel et utile
+- Réponds dans la langue du client (Français, Darija, ou Anglais)
 
-INFOS DU STORE :
-- Produits : [AJOUTE TES PRODUITS ICI]
-- Livraison : 3-5 jours, gratuite dès 300 MAD
-- Retours : 7 jours après réception
-- Paiement : Carte / Cash à la livraison
-- Support : 9h-18h Lundi-Samedi
+📦 INFOS DU STORE :
+- Boutique : NessYou - Boutique en ligne au Maroc
+- Produits : Vêtements, accessoires, articles tendance
+- Prix : À partir de 99 MAD
+- Livraison : 3-5 jours ouvrés, GRATUITE dès 300 MAD
+- Frais de livraison : 30 MAD (si moins de 300 MAD)
+- Retours : Gratuits sous 7 jours
+- Paiement : Carte bancaire / Cash à la livraison (COD)
+- Support : 9h-18h du Lundi au Samedi
+- WhatsApp : +212 635-611933
+
+💡 EXEMPLES DE RÉPONSES :
+- "Bonjour" → "Bonjour ! 👋 Bienvenue chez NessYou. Comment puis-je vous aider ?"
+- "Prix" → "Nos prix commencent à 99 MAD. Quel type de produit vous intéresse ?"
+- "Livraison Casablanca" → "Oui ! Livraison à Casablanca en 3-5 jours. Gratuite dès 300 MAD 🚚"
+
+Sois concis, utilise des emojis, et propose toujours de l'aide supplémentaire.
 `;
 
 // ===== TEST ROUTE =====
@@ -96,27 +105,18 @@ async function handleMessage(phone, message) {
 
 // ===== APPEL OLLAMA =====
 async function askLlama(userMessage) {
-  const classifyResponse = await axios.post(`${OLLAMA_URL}/api/generate`, {
-    model: 'llama3.1:8b',
-    prompt: `Réponds UNIQUEMENT par OUI ou NON. Est-ce que cette question est liée à un store e-commerce, ses produits, livraison, commandes ou service client ? Question: "${userMessage}"`,
-    stream: false,
-    options: { temperature: 0, num_predict: 5 }
-  }, {
-    headers: { 'ngrok-skip-browser-warning': 'true' }
-  });
-
-  const isRelevant = classifyResponse.data.response
-    .trim().toUpperCase().includes('OUI');
-
-  if (!isRelevant) {
-    return "Désolé, je suis uniquement disponible pour les questions liées à notre boutique 🙏";
-  }
-
+  // Répondre directement sans classification stricte
   const response = await axios.post(`${OLLAMA_URL}/api/generate`, {
     model: 'llama3.1:8b',
-    prompt: `${STORE_CONTEXT}\n\nClient: ${userMessage}\nAssistant:`,
+    prompt: `${STORE_CONTEXT}
+
+Message du client: "${userMessage}"
+
+Réponds de manière utile, amicale et concise. Si la question n'est pas liée à la boutique, réponds quand même poliment en redirigeant vers les produits.
+
+Ta réponse:`,
     stream: false,
-    options: { temperature: 0.7, num_predict: 300 }
+    options: { temperature: 0.7, num_predict: 200 }
   }, {
     headers: { 'ngrok-skip-browser-warning': 'true' }
   });

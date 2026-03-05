@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 WhatsApp Bot IA - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #25D366;
+            --dark: #1a1a2e;
+            --darker: #16213e;
+            --accent: #0f3460;
+        }
+        body {
+            background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
+            color: #fff;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .card-header {
+            background: rgba(37, 211, 102, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        .status-online { background: #25D366; color: #000; }
+        .status-offline { background: #dc3545; }
+        .status-timeout { background: #ffc107; color: #000; }
+        .status-error { background: #6c757d; }
+        
+        .node-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: transform 0.3s;
+        }
+        .node-card:hover {
+            transform: translateY(-5px);
+            background: rgba(37, 211, 102, 0.15);
+        }
+        .flow-step {
+            background: rgba(37, 211, 102, 0.1);
+            border-left: 3px solid var(--primary);
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        .terminal {
+            background: #0d1117;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .terminal .prompt { color: #25D366; }
+        .terminal .response { color: #58a6ff; }
+        .terminal .error { color: #f85149; }
+        
+        .btn-whatsapp {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            font-weight: bold;
+        }
+        .btn-whatsapp:hover {
+            background: #128C7E;
+            color: #fff;
+        }
+        .architecture-diagram {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        .arch-node {
+            display: inline-block;
+            background: rgba(37, 211, 102, 0.2);
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin: 5px;
+            font-weight: bold;
+        }
+        .arch-arrow {
+            color: var(--primary);
+            font-size: 1.5em;
+            margin: 0 10px;
+        }
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+        }
+        .refresh-btn {
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fab fa-whatsapp text-success"></i> WhatsApp Bot IA</h1>
+                        <p class="text-muted mb-0">Dashboard de Supervision</p>
+                    </div>
+                    <div>
+                        <span class="badge bg-secondary" id="lastUpdate">Dernière MAJ: --</span>
+                        <button class="btn btn-outline-success ms-2" onclick="refreshAll()">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-train"></i> Railway (Backend)</span>
+                        <span class="status-badge" id="railway-status">...</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted" id="railway-url">URL: --</p>
+                        <p class="mb-0">Temps de réponse: <strong id="railway-time">--</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-robot"></i> Ollama (Local)</span>
+                        <span class="status-badge" id="ollama-status">...</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted">URL: http://localhost:11434</p>
+                        <p class="mb-0">Temps de réponse: <strong id="ollama-time">--</strong></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-link"></i> ngrok Tunnel</span>
+                        <span class="status-badge" id="ngrok-status">...</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted" id="ngrok-url">URL: --</p>
+                        <p class="mb-0">Temps de réponse: <strong id="ngrok-time">--</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-project-diagram"></i> Architecture du Système
+                    </div>
+                    <div class="card-body">
+                        <div class="architecture-diagram mb-4">
+                            <div class="arch-node">👤 User</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">📱 WhatsApp</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">🚂 Railway</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">🔗 ngrok</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">🤖 Ollama</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">🦙 Llama 3.1</div>
+                            <span class="arch-arrow">→</span>
+                            <div class="arch-node">🎮 RTX 4060</div>
+                        </div>
+                        <div id="flow-steps">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Panels -->
+        <div class="row mb-4">
+            <!-- Test Llama -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="fas fa-flask"></i> Test Llama
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Message à envoyer</label>
+                            <input type="text" class="form-control bg-dark text-white" id="testMessage" 
+                                   value="Vous livrez à Casablanca ?">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Route</label>
+                            <select class="form-select bg-dark text-white" id="testRoute">
+                                <option value="local">🟢 Local (Ollama direct)</option>
+                                <option value="ngrok">🔗 Via ngrok</option>
+                                <option value="railway" selected>🚂 Via Railway (complet)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-whatsapp w-100" onclick="testLlama()">
+                            <i class="fas fa-paper-plane"></i> Envoyer
+                        </button>
+                        <div class="terminal mt-3" id="llama-terminal">
+                            <span class="text-muted">En attente de test...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modèles Ollama -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="fas fa-brain"></i> Modèles Ollama</span>
+                        <i class="fas fa-sync-alt refresh-btn" onclick="loadModels()"></i>
+                    </div>
+                    <div class="card-body" id="models-list">
+                        <span class="text-muted">Chargement...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp Test -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fab fa-whatsapp"></i> Test WhatsApp API
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Token d'accès WhatsApp</label>
+                                    <input type="password" class="form-control bg-dark text-white" 
+                                           id="waToken" placeholder="EAAUN8fPZCm8g...">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Numéro destinataire</label>
+                                    <input type="text" class="form-control bg-dark text-white" 
+                                           id="waNumber" value="212631298588" placeholder="212XXXXXXXXX">
+                                </div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-whatsapp w-100 mb-3" onclick="testWhatsApp()">
+                                    <i class="fas fa-paper-plane"></i> Envoyer
+                                </button>
+                            </div>
+                        </div>
+                        <div class="terminal" id="whatsapp-terminal">
+                            <span class="text-muted">Résultat du test WhatsApp...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-cog"></i> Configuration
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="node-card">
+                                    <h6><i class="fas fa-phone"></i> Phone Number ID</h6>
+                                    <code id="config-phone">1026114920581795</code>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="node-card">
+                                    <h6><i class="fas fa-building"></i> WhatsApp Business ID</h6>
+                                    <code id="config-business">1525207402945764</code>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="node-card">
+                                    <h6><i class="fas fa-key"></i> Verify Token</h6>
+                                    <code>monsecret123</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mise à jour du statut
+        async function refreshAll() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Update timestamp
+                document.getElementById('lastUpdate').textContent = 
+                    'Dernière MAJ: ' + new Date(data.timestamp).toLocaleTimeString();
+                
+                // Update services
+                updateServiceCard('railway', data.services.railway);
+                updateServiceCard('ollama', data.services.ollama_local);
+                updateServiceCard('ngrok', data.services.ngrok);
+                
+                // Update config
+                document.getElementById('ngrok-url').textContent = 'URL: ' + data.config.ngrok_url;
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        function updateServiceCard(service, data) {
+            const statusEl = document.getElementById(`${service}-status`);
+            const timeEl = document.getElementById(`${service}-time`);
+            
+            statusEl.className = `status-badge status-${data.status}`;
+            statusEl.textContent = data.status.toUpperCase();
+            
+            if (data.response_time) {
+                timeEl.textContent = (data.response_time * 1000).toFixed(0) + ' ms';
+            } else {
+                timeEl.textContent = '--';
+            }
+            
+            if (service === 'railway' && data.url) {
+                document.getElementById('railway-url').textContent = 'URL: ' + data.url;
+            }
+        }
+
+        // Test Llama
+        async function testLlama() {
+            const terminal = document.getElementById('llama-terminal');
+            const message = document.getElementById('testMessage').value;
+            const route = document.getElementById('testRoute').value;
+            
+            terminal.innerHTML = '<span class="prompt">$ Envoi en cours...</span><br><div class="spinner-border text-success"></div>';
+            
+            try {
+                const response = await fetch('/api/test-llama', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message, route})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    terminal.innerHTML = `
+                        <span class="prompt">$ Route: ${data.route}</span><br>
+                        <span class="prompt">$ Message: "${message}"</span><br><br>
+                        <span class="response">${data.response}</span>
+                    `;
+                } else {
+                    terminal.innerHTML = `
+                        <span class="prompt">$ Route: ${data.route}</span><br>
+                        <span class="error">❌ Erreur: ${data.error}</span>
+                    `;
+                }
+            } catch (error) {
+                terminal.innerHTML = `<span class="error">❌ Erreur: ${error.message}</span>`;
+            }
+        }
+
+        // Load models
+        async function loadModels() {
+            const container = document.getElementById('models-list');
+            container.innerHTML = '<div class="spinner-border text-success"></div>';
+            
+            try {
+                const response = await fetch('/api/ollama/models');
+                const data = await response.json();
+                
+                if (data.success && data.models.length > 0) {
+                    container.innerHTML = data.models.map(m => `
+                        <div class="node-card">
+                            <div class="d-flex justify-content-between">
+                                <strong>🦙 ${m.name}</strong>
+                                <span class="badge bg-success">${m.size}</span>
+                            </div>
+                            <small class="text-muted">Famille: ${m.family}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<span class="text-muted">Aucun modèle trouvé</span>';
+                }
+            } catch (error) {
+                container.innerHTML = `<span class="text-danger">Erreur: ${error.message}</span>`;
+            }
+        }
+
+        // Load architecture
+        async function loadArchitecture() {
+            try {
+                const response = await fetch('/api/architecture');
+                const data = await response.json();
+                
+                const flowContainer = document.getElementById('flow-steps');
+                flowContainer.innerHTML = data.flow.map(step => `
+                    <div class="flow-step">${step}</div>
+                `).join('');
+            } catch (error) {
+                console.error('Erreur architecture:', error);
+            }
+        }
+
+        // Test WhatsApp
+        async function testWhatsApp() {
+            const terminal = document.getElementById('whatsapp-terminal');
+            const token = document.getElementById('waToken').value;
+            const to = document.getElementById('waNumber').value;
+            
+            if (!token) {
+                terminal.innerHTML = '<span class="error">❌ Token requis</span>';
+                return;
+            }
+            
+            terminal.innerHTML = '<span class="prompt">$ Envoi du message...</span><br><div class="spinner-border text-success"></div>';
+            
+            try {
+                const response = await fetch('/api/test-whatsapp', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({token, to})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    terminal.innerHTML = `
+                        <span class="prompt">$ Message envoyé !</span><br>
+                        <span class="response">${JSON.stringify(data.response, null, 2)}</span>
+                    `;
+                } else {
+                    terminal.innerHTML = `
+                        <span class="error">❌ Erreur: ${data.error || JSON.stringify(data.response)}</span>
+                    `;
+                }
+            } catch (error) {
+                terminal.innerHTML = `<span class="error">❌ Erreur: ${error.message}</span>`;
+            }
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAll();
+            loadModels();
+            loadArchitecture();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshAll, 30000);
+        });
+    </script>
+</body>
+</html>
